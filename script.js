@@ -1,6 +1,7 @@
 const MONTHS_VISIBLE = 4;
 const HOLIDAY_STORAGE_KEY = "workdayCalendar.holidays";
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const canadaHolidayCache = new Map();
 
 const calendarGrid = document.querySelector("#calendarGrid");
 const calendarTitle = document.querySelector("#calendarTitle");
@@ -18,8 +19,8 @@ const holidayList = document.querySelector("#holidayList");
 
 const today = startOfDay(new Date());
 let visibleStart = new Date(today.getFullYear(), today.getMonth(), 1);
-let mode = "start";
-let rangeInputMode = "days";
+let mode = "end";
+let rangeInputMode = "hours";
 let anchorDate = null;
 let computedDate = null;
 let computedWorkdayCount = null;
@@ -128,7 +129,6 @@ function renderCalendar() {
 
     for (let day = 1; day <= dayCount; day += 1) {
       const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
-      const dateKey = toDateKey(date);
       const button = document.createElement("button");
       button.type = "button";
       button.className = getDayClassName(date);
@@ -150,7 +150,7 @@ function renderHolidays() {
 
   if (sortedHolidays.length === 0) {
     const empty = document.createElement("li");
-    empty.textContent = "No holidays saved.";
+    empty.textContent = "No extra holidays saved.";
     holidayList.append(empty);
     return;
   }
@@ -179,7 +179,7 @@ function renderHolidays() {
 
 function selectDate(date) {
   if (!isWorkday(date)) {
-    setStatus(`${formatDate(date)} is not a workday. Choose a weekday that is not saved as a holiday.`);
+    setStatus(`${formatDate(date)} is not a workday. Choose a weekday that is not a holiday.`);
     return;
   }
 
@@ -205,7 +205,7 @@ function calculateRange() {
   }
 
   if (!isWorkday(anchorDate)) {
-    setStatus(`${formatDate(anchorDate)} is no longer a workday because it is a saved holiday.`);
+    setStatus(`${formatDate(anchorDate)} is no longer a workday because it is a holiday.`);
     updateResult();
     return;
   }
@@ -295,7 +295,7 @@ function getDayClassName(date) {
   const key = toDateKey(date);
 
   if (isWeekend(date)) classes.push("weekend");
-  if (holidays.has(key)) classes.push("holiday");
+  if (isHoliday(date)) classes.push("holiday");
   if (isSameDate(date, today)) classes.push("today");
   if (isRangeDate(date)) classes.push("in-range");
 
@@ -318,18 +318,127 @@ function isRangeDate(date) {
 function getDayTitle(date) {
   const labels = [formatDate(date)];
   if (isWeekend(date)) labels.push("Weekend");
-  if (holidays.has(toDateKey(date))) labels.push("Holiday");
+  labels.push(...getHolidayLabels(date));
   if (isSameDate(date, today)) labels.push("Today");
   return labels.join(", ");
 }
 
 function isWorkday(date) {
-  return !isWeekend(date) && !holidays.has(toDateKey(date));
+  return !isWeekend(date) && !isHoliday(date);
 }
 
 function isWeekend(date) {
   const day = date.getDay();
   return day === 0 || day === 6;
+}
+
+function isHoliday(date) {
+  return getHolidayLabels(date).length > 0;
+}
+
+function getHolidayLabels(date) {
+  const key = toDateKey(date);
+  const labels = [];
+
+  if (holidays.has(key)) {
+    labels.push("Extra holiday");
+  }
+
+  const canadaHoliday = getCanadaStatHolidays(date.getFullYear()).get(key);
+  if (canadaHoliday) {
+    labels.push(...canadaHoliday);
+  }
+
+  return labels;
+}
+
+function getCanadaStatHolidays(year) {
+  if (canadaHolidayCache.has(year)) {
+    return canadaHolidayCache.get(year);
+  }
+
+  const holidayMap = new Map();
+  const addHoliday = (date, name) => addHolidayLabel(holidayMap, date, name);
+  const addObserved = (monthIndex, day, name) => {
+    const date = new Date(year, monthIndex, day);
+    addHoliday(date, name);
+
+    if (date.getDay() === 6) {
+      addHoliday(addDays(date, 2), `${name} observed`);
+    } else if (date.getDay() === 0) {
+      addHoliday(addDays(date, 1), `${name} observed`);
+    }
+  };
+
+  addObserved(0, 1, "New Year's Day");
+  addHoliday(addDays(getEasterSunday(year), -2), "Good Friday");
+  addHoliday(getVictoriaDay(year), "Victoria Day");
+  addObserved(6, 1, "Canada Day");
+  addHoliday(getNthWeekdayOfMonth(year, 8, 1, 1), "Labour Day");
+  addObserved(8, 30, "National Day for Truth and Reconciliation");
+  addHoliday(getNthWeekdayOfMonth(year, 9, 1, 2), "Thanksgiving Day");
+  addObserved(10, 11, "Remembrance Day");
+  addChristmasAndBoxingDayHolidays(year, addHoliday);
+
+  canadaHolidayCache.set(year, holidayMap);
+  return holidayMap;
+}
+
+function addHolidayLabel(holidayMap, date, name) {
+  const key = toDateKey(date);
+  const labels = holidayMap.get(key) || [];
+  labels.push(name);
+  holidayMap.set(key, labels);
+}
+
+function addChristmasAndBoxingDayHolidays(year, addHoliday) {
+  const christmas = new Date(year, 11, 25);
+  const boxing = new Date(year, 11, 26);
+  const christmasWeekday = christmas.getDay();
+
+  addHoliday(christmas, "Christmas Day");
+  addHoliday(boxing, "Boxing Day");
+
+  if (christmasWeekday === 5) {
+    addHoliday(new Date(year, 11, 28), "Boxing Day observed");
+  } else if (christmasWeekday === 6) {
+    addHoliday(new Date(year, 11, 27), "Christmas Day observed");
+    addHoliday(new Date(year, 11, 28), "Boxing Day observed");
+  } else if (christmasWeekday === 0) {
+    addHoliday(new Date(year, 11, 27), "Christmas Day observed");
+  }
+}
+
+function getVictoriaDay(year) {
+  let date = new Date(year, 4, 24);
+  while (date.getDay() !== 1) {
+    date = addDays(date, -1);
+  }
+  return date;
+}
+
+function getNthWeekdayOfMonth(year, monthIndex, weekday, occurrence) {
+  const date = new Date(year, monthIndex, 1);
+  const offset = (weekday - date.getDay() + 7) % 7;
+  return new Date(year, monthIndex, 1 + offset + (occurrence - 1) * 7);
+}
+
+function getEasterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
 }
 
 function setStatus(message) {
