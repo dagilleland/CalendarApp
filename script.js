@@ -1,7 +1,24 @@
 const MONTHS_VISIBLE = 4;
 const HOLIDAY_STORAGE_KEY = "workdayCalendar.holidays";
+const REGION_STORAGE_KEY = "workdayCalendar.region";
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const canadaHolidayCache = new Map();
+const provinceHolidayCache = new Map();
+const canadianRegions = [
+  ["AB", "Alberta"],
+  ["BC", "British Columbia"],
+  ["MB", "Manitoba"],
+  ["NB", "New Brunswick"],
+  ["NL", "Newfoundland and Labrador"],
+  ["NT", "Northwest Territories"],
+  ["NS", "Nova Scotia"],
+  ["NU", "Nunavut"],
+  ["ON", "Ontario"],
+  ["PE", "Prince Edward Island"],
+  ["QC", "Quebec"],
+  ["SK", "Saskatchewan"],
+  ["YT", "Yukon"],
+];
 
 const calendarGrid = document.querySelector("#calendarGrid");
 const calendarTitle = document.querySelector("#calendarTitle");
@@ -16,6 +33,7 @@ const statusMessage = document.querySelector("#statusMessage");
 const holidayForm = document.querySelector("#holidayForm");
 const holidayDateInput = document.querySelector("#holidayDate");
 const holidayList = document.querySelector("#holidayList");
+const regionSelect = document.querySelector("#regionSelect");
 
 const today = startOfDay(new Date());
 let visibleStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -25,6 +43,9 @@ let anchorDate = null;
 let computedDate = null;
 let computedWorkdayCount = null;
 let holidays = loadHolidays();
+let selectedRegion = loadSelectedRegion();
+
+populateRegionSelect();
 
 document.querySelector("#prevMonths").addEventListener("click", () => {
   visibleStart = addMonths(visibleStart, -MONTHS_VISIBLE);
@@ -66,6 +87,13 @@ document.querySelectorAll("input[name='inputMode']").forEach((input) => {
     calculateRange();
     render();
   });
+});
+
+regionSelect.addEventListener("change", (event) => {
+  selectedRegion = event.target.value;
+  saveSelectedRegion();
+  calculateRange();
+  render();
 });
 
 holidayForm.addEventListener("submit", (event) => {
@@ -349,7 +377,82 @@ function getHolidayLabels(date) {
     labels.push(...canadaHoliday);
   }
 
+  if (selectedRegion) {
+    const provinceHoliday = getProvincialHolidays(date.getFullYear(), selectedRegion).get(key);
+    if (provinceHoliday) {
+      labels.push(...provinceHoliday);
+    }
+  }
+
   return labels;
+}
+
+function getProvincialHolidays(year, region) {
+  const cacheKey = `${year}-${region}`;
+  if (provinceHolidayCache.has(cacheKey)) {
+    return provinceHolidayCache.get(cacheKey);
+  }
+
+  const holidayMap = new Map();
+  const addHoliday = (date, name) => addHolidayLabel(holidayMap, date, name);
+  const addObserved = (monthIndex, day, name) => addObservedHoliday(holidayMap, year, monthIndex, day, name);
+
+  switch (region) {
+    case "AB":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Family Day");
+      break;
+    case "BC":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Family Day");
+      addHoliday(getNthWeekdayOfMonth(year, 7, 1, 1), "British Columbia Day");
+      break;
+    case "MB":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Louis Riel Day");
+      addObserved(8, 30, "Orange Shirt Day");
+      break;
+    case "NB":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Family Day");
+      addHoliday(getNthWeekdayOfMonth(year, 7, 1, 1), "New Brunswick Day");
+      break;
+    case "NL":
+      addHoliday(getNearestMonday(year, 2, 17), "Saint Patrick's Day");
+      addHoliday(getNearestMonday(year, 3, 23), "Saint George's Day");
+      addHoliday(getNearestMonday(year, 5, 24), "Discovery Day");
+      addHoliday(getNearestMonday(year, 6, 12), "Orangemen's Day");
+      addHoliday(getNthWeekdayOfMonth(year, 7, 3, 1), "Regatta Day");
+      break;
+    case "NT":
+      addHoliday(new Date(year, 5, 21), "National Indigenous Peoples Day");
+      addHoliday(getNthWeekdayOfMonth(year, 7, 1, 1), "Civic Holiday");
+      break;
+    case "NS":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Heritage Day");
+      break;
+    case "NU":
+      addObserved(6, 9, "Nunavut Day");
+      addHoliday(getNthWeekdayOfMonth(year, 7, 1, 1), "Civic Holiday");
+      break;
+    case "ON":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Family Day");
+      break;
+    case "PE":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Islander Day");
+      break;
+    case "QC":
+      addHoliday(getVictoriaDay(year), "National Patriots' Day");
+      addObserved(5, 24, "Saint-Jean-Baptiste Day");
+      break;
+    case "SK":
+      addHoliday(getNthWeekdayOfMonth(year, 1, 1, 3), "Family Day");
+      addHoliday(getNthWeekdayOfMonth(year, 7, 1, 1), "Saskatchewan Day");
+      break;
+    case "YT":
+      addHoliday(new Date(year, 5, 21), "National Indigenous Peoples Day");
+      addHoliday(getNthWeekdayOfMonth(year, 7, 1, 3), "Discovery Day");
+      break;
+  }
+
+  provinceHolidayCache.set(cacheKey, holidayMap);
+  return holidayMap;
 }
 
 function getCanadaStatHolidays(year) {
@@ -360,14 +463,7 @@ function getCanadaStatHolidays(year) {
   const holidayMap = new Map();
   const addHoliday = (date, name) => addHolidayLabel(holidayMap, date, name);
   const addObserved = (monthIndex, day, name) => {
-    const date = new Date(year, monthIndex, day);
-    addHoliday(date, name);
-
-    if (date.getDay() === 6) {
-      addHoliday(addDays(date, 2), `${name} observed`);
-    } else if (date.getDay() === 0) {
-      addHoliday(addDays(date, 1), `${name} observed`);
-    }
+    addObservedHoliday(holidayMap, year, monthIndex, day, name);
   };
 
   addObserved(0, 1, "New Year's Day");
@@ -382,6 +478,17 @@ function getCanadaStatHolidays(year) {
 
   canadaHolidayCache.set(year, holidayMap);
   return holidayMap;
+}
+
+function addObservedHoliday(holidayMap, year, monthIndex, day, name) {
+  const date = new Date(year, monthIndex, day);
+  addHolidayLabel(holidayMap, date, name);
+
+  if (date.getDay() === 6) {
+    addHolidayLabel(holidayMap, addDays(date, 2), `${name} observed`);
+  } else if (date.getDay() === 0) {
+    addHolidayLabel(holidayMap, addDays(date, 1), `${name} observed`);
+  }
 }
 
 function addHolidayLabel(holidayMap, date, name) {
@@ -423,6 +530,15 @@ function getNthWeekdayOfMonth(year, monthIndex, weekday, occurrence) {
   return new Date(year, monthIndex, 1 + offset + (occurrence - 1) * 7);
 }
 
+function getNearestMonday(year, monthIndex, day) {
+  const date = new Date(year, monthIndex, day);
+  const dayOfWeek = date.getDay();
+  const distanceToPreviousMonday = (dayOfWeek + 6) % 7;
+  const distanceToNextMonday = (8 - dayOfWeek) % 7;
+  const offset = distanceToPreviousMonday <= distanceToNextMonday ? -distanceToPreviousMonday : distanceToNextMonday;
+  return addDays(date, offset);
+}
+
 function getEasterSunday(year) {
   const a = year % 19;
   const b = Math.floor(year / 100);
@@ -456,6 +572,26 @@ function loadHolidays() {
   } catch {
     return new Set();
   }
+}
+
+function populateRegionSelect() {
+  canadianRegions.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    regionSelect.append(option);
+  });
+
+  regionSelect.value = selectedRegion;
+}
+
+function saveSelectedRegion() {
+  localStorage.setItem(REGION_STORAGE_KEY, selectedRegion);
+}
+
+function loadSelectedRegion() {
+  const saved = localStorage.getItem(REGION_STORAGE_KEY) || "";
+  return canadianRegions.some(([value]) => value === saved) ? saved : "";
 }
 
 function isDateKey(value) {
