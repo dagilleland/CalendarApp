@@ -171,6 +171,8 @@ h2 {
 }
 
 #workdayCount,
+#hourCount,
+#hoursPerDay,
 #holidayDate {
   width: 100%;
   min-height: 38px;
@@ -178,6 +180,20 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
+}
+
+.input-mode-fields {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.input-mode-fields[hidden] {
+  display: none;
+}
+
+.input-mode-fields .field-label:not(:first-child) {
+  margin-top: 4px;
 }
 
 .result-panel {

@@ -4,7 +4,11 @@ const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const calendarGrid = document.querySelector("#calendarGrid");
 const calendarTitle = document.querySelector("#calendarTitle");
+const daysFields = document.querySelector("#daysFields");
+const hoursFields = document.querySelector("#hoursFields");
 const workdayCountInput = document.querySelector("#workdayCount");
+const hourCountInput = document.querySelector("#hourCount");
+const hoursPerDayInput = document.querySelector("#hoursPerDay");
 const resultLabel = document.querySelector("#resultLabel");
 const resultDate = document.querySelector("#resultDate");
 const statusMessage = document.querySelector("#statusMessage");
@@ -15,8 +19,10 @@ const holidayList = document.querySelector("#holidayList");
 const today = startOfDay(new Date());
 let visibleStart = new Date(today.getFullYear(), today.getMonth(), 1);
 let mode = "start";
+let rangeInputMode = "days";
 let anchorDate = null;
 let computedDate = null;
+let computedWorkdayCount = null;
 let holidays = loadHolidays();
 
 document.querySelector("#prevMonths").addEventListener("click", () => {
@@ -45,9 +51,20 @@ document.querySelectorAll("input[name='mode']").forEach((input) => {
   });
 });
 
-workdayCountInput.addEventListener("input", () => {
-  calculateRange();
-  render();
+document.querySelectorAll("input[name='inputMode']").forEach((input) => {
+  input.addEventListener("change", (event) => {
+    rangeInputMode = event.target.value;
+    syncInputModeFields();
+    calculateRange();
+    render();
+  });
+});
+
+[workdayCountInput, hourCountInput, hoursPerDayInput].forEach((input) => {
+  input.addEventListener("input", () => {
+    calculateRange();
+    render();
+  });
 });
 
 holidayForm.addEventListener("submit", (event) => {
@@ -67,6 +84,7 @@ holidayForm.addEventListener("submit", (event) => {
 });
 
 function render() {
+  syncInputModeFields();
   renderCalendar();
   renderHolidays();
   updateResult();
@@ -172,6 +190,7 @@ function selectDate(date) {
 
 function calculateRange() {
   computedDate = null;
+  computedWorkdayCount = null;
 
   if (!anchorDate) {
     setStatus("");
@@ -179,9 +198,8 @@ function calculateRange() {
     return;
   }
 
-  const count = Number(workdayCountInput.value);
-  if (!Number.isInteger(count) || count < 1) {
-    setStatus("Enter a whole number of work days greater than zero.");
+  const count = getWorkdayCount();
+  if (!count) {
     updateResult();
     return;
   }
@@ -193,6 +211,7 @@ function calculateRange() {
   }
 
   computedDate = mode === "start" ? addWorkdaysInclusive(anchorDate, count, 1) : addWorkdaysInclusive(anchorDate, count, -1);
+  computedWorkdayCount = count;
   setStatus("");
   updateResult();
 }
@@ -212,8 +231,49 @@ function updateResult() {
 
   const start = mode === "start" ? anchorDate : computedDate;
   const end = mode === "start" ? computedDate : anchorDate;
-  resultLabel.textContent = `${formatDate(start)} through ${formatDate(end)}`;
+  resultLabel.textContent = `${formatDate(start)} through ${formatDate(end)} (${formatWorkdayCount(computedWorkdayCount)})`;
   resultDate.textContent = mode === "start" ? `End: ${formatDate(end)}` : `Start: ${formatDate(start)}`;
+}
+
+function getWorkdayCount() {
+  if (rangeInputMode === "days") {
+    const count = Number(workdayCountInput.value);
+    if (!Number.isInteger(count) || count < 1) {
+      setStatus("Enter a whole number of work days greater than zero.");
+      return null;
+    }
+    return count;
+  }
+
+  const hours = Number(hourCountInput.value);
+  const hoursPerDay = Number(hoursPerDayInput.value);
+
+  if (!Number.isFinite(hours) || hours <= 0) {
+    setStatus("Enter a number of hours greater than zero.");
+    return null;
+  }
+
+  if (!Number.isFinite(hoursPerDay) || hoursPerDay <= 0) {
+    setStatus("Enter hours per day greater than zero.");
+    return null;
+  }
+
+  return Math.ceil(hours / hoursPerDay);
+}
+
+function syncInputModeFields() {
+  daysFields.hidden = rangeInputMode !== "days";
+  hoursFields.hidden = rangeInputMode !== "hours";
+}
+
+function formatWorkdayCount(count) {
+  if (rangeInputMode !== "hours") {
+    return `${count} work ${count === 1 ? "day" : "days"}`;
+  }
+
+  const hours = Number(hourCountInput.value);
+  const hoursPerDay = Number(hoursPerDayInput.value);
+  return `${formatNumber(hours)} hours at ${formatNumber(hoursPerDay)}/day = ${count} work ${count === 1 ? "day" : "days"}`;
 }
 
 function addWorkdaysInclusive(date, count, direction) {
@@ -328,6 +388,12 @@ function formatDate(date) {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function formatMonthYear(date) {
