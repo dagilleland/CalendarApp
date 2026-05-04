@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Workday Range Calendar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Inclusive workday calculator</p>
+          <h1>Multi-month calendar</h1>
+        </div>
+        <div class="month-controls" aria-label="Calendar navigation">
+          <button id="prevMonths" type="button" title="Previous four months" aria-label="Previous four months">‹</button>
+          <button id="todayButton" type="button">Today</button>
+          <button id="nextMonths" type="button" title="Next four months" aria-label="Next four months">›</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="control-panel" aria-label="Range controls">
+          <section class="panel-section">
+            <h2>Known date</h2>
+            <div class="segmented" role="radiogroup" aria-label="Known date type">
+              <label>
+                <input type="radio" name="mode" value="start" checked />
+                <span>Start</span>
+              </label>
+              <label>
+                <input type="radio" name="mode" value="end" />
+                <span>End</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <label class="field-label" for="workdayCount">Work days</label>
+            <input id="workdayCount" type="number" min="1" step="1" value="5" inputmode="numeric" />
+          </section>
+
+          <section class="result-panel" aria-live="polite">
+            <span id="resultLabel">Select a workday to begin.</span>
+            <strong id="resultDate">No range yet</strong>
+            <p id="statusMessage" class="status-message"></p>
+          </section>
+
+          <section class="panel-section">
+            <h2>Holidays</h2>
+            <form id="holidayForm" class="holiday-form">
+              <label class="field-label" for="holidayDate">Exclude date</label>
+              <div class="holiday-input-row">
+                <input id="holidayDate" type="date" />
+                <button type="submit">Add</button>
+              </div>
+            </form>
+            <ul id="holidayList" class="holiday-list" aria-label="Saved holidays"></ul>
+          </section>
+
+          <section class="legend" aria-label="Calendar legend">
+            <span><i class="legend-start"></i> Start</span>
+            <span><i class="legend-end"></i> End</span>
+            <span><i class="legend-range"></i> Range</span>
+            <span><i class="legend-holiday"></i> Holiday</span>
+          </section>
+        </aside>
+
+        <section class="calendar-area">
+          <div id="calendarTitle" class="calendar-title" aria-live="polite"></div>
+          <div id="calendarGrid" class="calendar-grid" aria-label="Four month calendar"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
