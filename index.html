@@ -34,6 +34,10 @@
     />
     <meta name="twitter:image" content="https://gilleland.ca/CalendarApp/social-preview.png" />
     <meta name="twitter:image:alt" content="Workday Range Calendar preview" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css"
+    />
     <script>
       (() => {
         try {
@@ -66,15 +70,24 @@
           <div class="segmented theme-segmented" role="radiogroup" aria-label="Theme selection">
             <label>
               <input type="radio" name="themeMode" value="auto" checked />
-              <span>Auto</span>
+              <span title="Use system theme">
+                <i class="las la-desktop" aria-hidden="true"></i>
+                <span class="visually-hidden">Auto</span>
+              </span>
             </label>
             <label>
               <input type="radio" name="themeMode" value="light" />
-              <span>Light</span>
+              <span title="Use light theme">
+                <i class="las la-sun" aria-hidden="true"></i>
+                <span class="visually-hidden">Light</span>
+              </span>
             </label>
             <label>
               <input type="radio" name="themeMode" value="dark" />
-              <span>Dark</span>
+              <span title="Use dark theme">
+                <i class="las la-moon" aria-hidden="true"></i>
+                <span class="visually-hidden">Dark</span>
+              </span>
             </label>
           </div>
         </section>
