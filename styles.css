@@ -9,11 +9,47 @@
   --primary: #126b6f;
   --primary-dark: #0c5054;
   --primary-soft: #d8eff0;
+  --primary-border: #a7d5d7;
   --accent: #b44724;
   --accent-soft: #f7e2d8;
+  --accent-border: #e0a38f;
+  --accent-text: #7d321b;
   --range: #e7f5df;
+  --range-border: #b9d6a5;
   --today: #855c00;
+  --day-bg: #fbfcfd;
+  --weekend-bg: #f0f2f4;
+  --weekend-text: #8a95a3;
+  --status: #8f2d17;
+  --focus: rgba(18, 107, 111, 0.32);
   --shadow: 0 18px 55px rgba(22, 34, 51, 0.12);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101418;
+  --surface: #171d23;
+  --surface-muted: #222b33;
+  --text: #eef3f6;
+  --muted: #a8b4c0;
+  --line: #34424e;
+  --primary: #54c1c3;
+  --primary-dark: #bceff0;
+  --primary-soft: #15383c;
+  --primary-border: #2b666b;
+  --accent: #f09870;
+  --accent-soft: #422820;
+  --accent-border: #7b4938;
+  --accent-text: #ffd3c2;
+  --range: #20382a;
+  --range-border: #3e6f4d;
+  --today: #f4c866;
+  --day-bg: #1d252c;
+  --weekend-bg: #151a1f;
+  --weekend-text: #7f8b96;
+  --status: #ffb29b;
+  --focus: rgba(84, 193, 195, 0.42);
+  --shadow: 0 18px 55px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -30,7 +66,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -61,6 +98,7 @@ button:active {
   display: flex;
   align-items: end;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 18px;
   margin-bottom: 14px;
 }
@@ -98,6 +136,15 @@ h2 {
   min-height: 42px;
   padding: 0 14px;
   font-weight: 700;
+}
+
+.theme-toggle {
+  min-width: 220px;
+}
+
+.theme-segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
 }
 
 .workspace {
@@ -180,6 +227,7 @@ h2 {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
+  background: var(--surface);
   color: var(--text);
 }
 
@@ -205,7 +253,7 @@ h2 {
   padding: 12px;
   margin-bottom: 14px;
   background: var(--primary-soft);
-  border: 1px solid #a7d5d7;
+  border: 1px solid var(--primary-border);
   border-radius: 8px;
 }
 
@@ -225,7 +273,7 @@ h2 {
 .status-message {
   min-height: 1.2em;
   margin: 10px 0 0;
-  color: #8f2d17;
+  color: var(--status);
   font-size: 0.88rem;
 }
 
@@ -313,12 +361,12 @@ h2 {
 
 .legend-range {
   background: var(--range);
-  border: 1px solid #b9d6a5;
+  border: 1px solid var(--range-border);
 }
 
 .legend-holiday {
   background: var(--accent-soft);
-  border: 1px solid #e0a38f;
+  border: 1px solid var(--accent-border);
 }
 
 .calendar-title {
@@ -366,7 +414,7 @@ h2 {
   padding: 3px;
   border: 1px solid transparent;
   border-radius: 6px;
-  background: #fbfcfd;
+  background: var(--day-bg);
   color: var(--text);
   font-size: 0.8rem;
   text-align: left;
@@ -377,18 +425,18 @@ h2 {
 }
 
 .day.weekend {
-  background: #f0f2f4;
-  color: #8a95a3;
+  background: var(--weekend-bg);
+  color: var(--weekend-text);
 }
 
 .day.holiday {
   background: var(--accent-soft);
-  color: #7d321b;
+  color: var(--accent-text);
 }
 
 .day.in-range {
   background: var(--range);
-  border-color: #b9d6a5;
+  border-color: var(--range-border);
 }
 
 .day.start-date,
@@ -424,8 +472,9 @@ h2 {
 
 .day:not(.empty):focus-visible,
 button:focus-visible,
-input:focus-visible {
-  outline: 3px solid rgba(18, 107, 111, 0.32);
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -454,6 +503,11 @@ input:focus-visible {
   .app-header {
     align-items: start;
     flex-direction: column;
+  }
+
+  .theme-toggle {
+    width: 100%;
+    min-width: 0;
   }
 
   .calendar-grid {

@@ -1,6 +1,7 @@
 const MONTHS_VISIBLE = 4;
 const HOLIDAY_STORAGE_KEY = "workdayCalendar.holidays";
 const REGION_STORAGE_KEY = "workdayCalendar.region";
+const THEME_STORAGE_KEY = "workdayCalendar.theme";
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const canadaHolidayCache = new Map();
 const provinceHolidayCache = new Map();
@@ -34,6 +35,8 @@ const holidayForm = document.querySelector("#holidayForm");
 const holidayDateInput = document.querySelector("#holidayDate");
 const holidayList = document.querySelector("#holidayList");
 const regionSelect = document.querySelector("#regionSelect");
+const themeColorMeta = document.querySelector("meta[name='theme-color']");
+const themePreference = window.matchMedia("(prefers-color-scheme: dark)");
 
 const today = startOfDay(new Date());
 let visibleStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -44,8 +47,11 @@ let computedDate = null;
 let computedWorkdayCount = null;
 let holidays = loadHolidays();
 let selectedRegion = loadSelectedRegion();
+let selectedTheme = loadSelectedTheme();
 
 populateRegionSelect();
+applyTheme();
+syncThemeControls();
 
 document.querySelector("#prevMonths").addEventListener("click", () => {
   visibleStart = addMonths(visibleStart, -MONTHS_VISIBLE);
@@ -94,6 +100,21 @@ regionSelect.addEventListener("change", (event) => {
   saveSelectedRegion();
   calculateRange();
   render();
+});
+
+document.querySelectorAll("input[name='themeMode']").forEach((input) => {
+  input.addEventListener("change", (event) => {
+    selectedTheme = event.target.value;
+    saveSelectedTheme();
+    applyTheme();
+    syncThemeControls();
+  });
+});
+
+themePreference.addEventListener("change", () => {
+  if (selectedTheme === "auto") {
+    applyTheme();
+  }
 });
 
 holidayForm.addEventListener("submit", (event) => {
@@ -592,6 +613,31 @@ function saveSelectedRegion() {
 function loadSelectedRegion() {
   const saved = localStorage.getItem(REGION_STORAGE_KEY) || "";
   return canadianRegions.some(([value]) => value === saved) ? saved : "";
+}
+
+function applyTheme() {
+  const resolvedTheme = selectedTheme === "dark" || (selectedTheme === "auto" && themePreference.matches) ? "dark" : "light";
+  document.documentElement.dataset.theme = resolvedTheme;
+  document.documentElement.dataset.themeChoice = selectedTheme;
+
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute("content", resolvedTheme === "dark" ? "#101418" : "#f6f7f9");
+  }
+}
+
+function syncThemeControls() {
+  document.querySelectorAll("input[name='themeMode']").forEach((input) => {
+    input.checked = input.value === selectedTheme;
+  });
+}
+
+function saveSelectedTheme() {
+  localStorage.setItem(THEME_STORAGE_KEY, selectedTheme);
+}
+
+function loadSelectedTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE_KEY) || "auto";
+  return ["auto", "light", "dark"].includes(saved) ? saved : "auto";
 }
 
 function isDateKey(value) {
